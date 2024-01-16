@@ -1,0 +1,48 @@
+ <!DOCTYPE html>
+ <html>
+ <head>
+   <title>View secret</title>
+   <meta charset="utf-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <style>
+     html {
+       height: 100%;
+     }
+
+     body {
+       min-height: 100%;
+       margin: 0;
+       background: white;
+       font-family: sans-serif;
+     }
+
+     .center {
+       margin: auto;
+       width: calc(2000px - 25rem);
+       min-width: 50vw;
+       max-width: 100%;
+       text-align: center;
+       overflow-wrap: break-word;
+     }
+
+     .footer {
+       /*position: absolute;*/
+       bottom: 0;
+     }
+
+     .monospace {
+       font-family: monospace, monospace;
+     }
+   </style>
+   </head>
+   <body>
+     <div style="font-size: 32px; padding: 3rem;" class="center monospace">
+       <div>
+         {{- .Secret -}}
+       </div>
+       <div style="font-size: 16px; position: absolute; padding: inherit; user-select: none;" class="center footer">
+         {{ .Views }} more views left.
+       </div>
+     </div>
+   </body>
+ </html>
