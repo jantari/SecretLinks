@@ -26,8 +26,9 @@
      }
 
      .footer {
-       /*position: absolute;*/
+       position: absolute;
        bottom: 0;
+       user-select: none;
      }
 
      .monospace {
@@ -40,7 +41,7 @@
        <div>
          {{- .Secret -}}
        </div>
-       <div style="font-size: 16px; position: absolute; padding: inherit; user-select: none;" class="center footer">
+       <div style="font-size: 16px; padding: inherit;" class="center footer">
          {{ .Views }} more views left.
        </div>
      </div>

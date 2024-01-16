@@ -12,8 +12,9 @@ import (
 )
 
 type Secret struct {
-    Secret string `json:"secret"`
-    Views  int    `json:"views"`
+    Secret       string `json:"secret"`
+    Views        int    `json:"views"`
+    ClickThrough bool   `json:"click"`
 }
 
 var SecretStore = make(map[uuid.UUID]Secret)
@@ -22,6 +23,7 @@ func main() {
     fmt.Println("KEK")
 
     tmpl := template.Must(template.ParseFiles("view.html"))
+    clickthroughPage := template.Must(template.ParseFiles("reveal.html"))
 
     router := chi.NewRouter()
     router.Get("/", func(w http.ResponseWriter, r *http.Request) {
@@ -61,12 +63,37 @@ func main() {
         }
         retrievedSecret, ok := SecretStore[secretId]
         if ok && retrievedSecret.Views > 0 {
-            retrievedSecret.Views--
-            SecretStore[secretId] = retrievedSecret
-            tmpl.Execute(w, retrievedSecret)
+            if !retrievedSecret.ClickThrough {
+                // Clickthrough not enabled, show secret immediately
+                retrievedSecret.Views--
+                SecretStore[secretId] = retrievedSecret
+                tmpl.Execute(w, retrievedSecret)
+            } else {
+                // Clickthrough enabled, return page with button to retrieve (additional request)
+                data := struct {
+                    SecretId string
+                } {
+                    SecretId: id,
+                }
+                clickthroughPage.Execute(w, data)
+            }
         } else {
             http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
             return
+        }
+    })
+    router.Post("/secret/{id}", func(w http.ResponseWriter, r *http.Request) {
+        id := chi.URLParam(r, "id")
+        secretId, err := uuid.Parse(id)
+        if err != nil {
+            http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+            return
+        }
+        retrievedSecret, ok := SecretStore[secretId]
+        if ok && retrievedSecret.Views > 0 {
+            retrievedSecret.Views--
+            SecretStore[secretId] = retrievedSecret
+            tmpl.Execute(w, retrievedSecret)
         }
     })
 
