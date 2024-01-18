@@ -16,13 +16,39 @@
        font-family: sans-serif;
      }
 
+     /* Dark Theme overrides */
+     @media (prefers-color-scheme: dark) {
+       body {
+         background: #212121;
+         color: white;
+       }
+     }
+
      .center {
        margin: auto;
-       width: calc(2000px - 25rem);
-       min-width: 50vw;
+       width: fit-content;
        max-width: 100%;
        text-align: center;
        overflow-wrap: break-word;
+     }
+
+     .button {
+       border: 2px solid transparent;
+       border-radius: 50vh;
+       padding: 0.2em 0.6em 0.2em 0.6em;
+       width: fit-content;
+       transition: 0.5s;
+       box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
+       background: linear-gradient(110deg, cadetblue, darkturquoise, cadetblue) padding-box,
+                   linear-gradient(to right, darkturquoise, cadetblue) border-box;
+       background-size: 300% auto;
+     }
+
+     .button:hover {
+       cursor: pointer;
+       transition: 1s;
+       box-shadow: 4px 8px 16px 4px rgba(0,0,0,0.25);
+       background-position: right 100%;
      }
 
      .footer {
@@ -35,11 +61,29 @@
        font-family: monospace, monospace;
      }
    </style>
+   <script>
+    function copySecretToClipboard() {
+      if (!navigator.clipboard) {
+        console.error('Could not copy text, no browser support');
+        return;
+      }
+
+      var text = document.querySelector('#secret').innerText;
+      navigator.clipboard.writeText(text).then(function() {
+        console.log('Copying to clipboard was successful!');
+      }, function(err) {
+        console.error('Could not copy text: ', err);
+      });
+    }
+   </script>
    </head>
    <body>
      <div style="font-size: 32px; padding: 3rem;" class="center monospace">
-       <div>
+       <div id="secret">
          {{- .Secret -}}
+       </div>
+       <div style="margin-top: 3rem; user-select: none;" class="center button" onclick="copySecretToClipboard()">
+         COPY📋
        </div>
        <div style="font-size: 16px; padding: inherit;" class="center footer">
          {{ .Views }} more views left.

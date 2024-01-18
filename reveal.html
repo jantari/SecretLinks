@@ -16,6 +16,14 @@
        font-family: sans-serif;
      }
 
+     /* Dark Theme overrides */
+     @media (prefers-color-scheme: dark) {
+       body {
+         background: #212121;
+         color: white;
+       }
+     }
+
      .center {
        margin: auto;
        width: fit-content;
@@ -31,9 +39,9 @@
        width: fit-content;
        transition: 0.5s;
        box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
-       background: linear-gradient(to left, cadetblue, darkturquoise, cadetblue) padding-box,
+       background: linear-gradient(110deg, cadetblue, darkturquoise, cadetblue) padding-box,
                    linear-gradient(to right, darkturquoise, cadetblue) border-box;
-       background-size: 200% auto;
+       background-size: 300% auto;
      }
 
      a.fill-div {
@@ -75,6 +83,20 @@
          document.querySelector('body').innerHTML = body.innerHTML;
        });
      }
+
+    function copySecretToClipboard() {
+      if (!navigator.clipboard) {
+        console.error('Could not copy text, no browser support');
+        return;
+      }
+
+      var text = document.querySelector('#secret').innerText;
+      navigator.clipboard.writeText(text).then(function() {
+        console.log('Copying to clipboard was successful!');
+      }, function(err) {
+        console.error('Could not copy text: ', err);
+      });
+    }
    </script>
    </head>
    <body>
