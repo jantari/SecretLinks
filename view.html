@@ -52,8 +52,11 @@
      }
 
      .footer {
-       position: absolute;
+       position: fixed;
        bottom: 0;
+       left: 50%;
+       transform: translate(-50%, 0);
+       padding: inherit;
        user-select: none;
      }
 
@@ -78,14 +81,14 @@
    </script>
    </head>
    <body>
-     <div style="font-size: 32px; padding: 3rem;" class="center monospace">
+     <div style="font-size: 32px; padding: 3rem; box-sizing: border-box;" class="center monospace">
        <div id="secret">
          {{- .Secret -}}
        </div>
        <div style="margin-top: 3rem; user-select: none;" class="center button" onclick="copySecretToClipboard()">
          COPY📋
        </div>
-       <div style="font-size: 16px; padding: inherit;" class="center footer">
+       <div style="font-size: 16px;" class="center footer">
          {{ .Views }} more views left.
        </div>
      </div>
