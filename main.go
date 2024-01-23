@@ -29,8 +29,8 @@ func main() {
     router.Get("/", func(w http.ResponseWriter, r *http.Request) {
         w.Write([]byte("SecretLinks"))
     })
-    router.Route("/api", func(r chi.Router) {
-        router.Post("/secret", newSecret)
+    router.Route("/api", func(apiRouter chi.Router) {
+        apiRouter.Post("/secret", newSecret)
     })
     router.Get("/secret/{id}", getSecret)
     router.Post("/secret/{id}", clickthroughRetrieveSecret)
