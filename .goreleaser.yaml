@@ -1,0 +1,26 @@
+project_name: SecretLinks
+
+builds:
+  - id: linux
+    ldflags:
+      - -s -w # do not include debug symbols in executables
+      - -X 'main.version={{.Version}}' # set version information in-program
+    env: [CGO_ENABLED=0]
+    goos: [linux]
+    goarch: [amd64]
+    goamd64: [v1]
+
+archives:
+  - format: zip
+
+changelog:
+  filters:
+    exclude:
+      - '^(?i)ci:'
+      - '^(?i)readme:'
+
+release:
+  name_template: "Version {{.Version}}"
+  prerelease: auto
+  draft: true
+
