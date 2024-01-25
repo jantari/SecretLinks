@@ -4,6 +4,7 @@ import (
     "fmt"
     "os"
     "flag"
+    "embed"
     "errors"
 
     "html/template"
@@ -28,8 +29,11 @@ var version = "development-build"
 
 var secretStore = make(map[uuid.UUID]secret)
 
-var viewPage = template.Must(template.ParseFiles("templates/view.html"))
-var clickthroughPage = template.Must(template.ParseFiles("templates/reveal.html"))
+//go:embed templates/*
+var embeddedTemplates embed.FS
+
+var viewPage *template.Template
+var clickthroughPage *template.Template
 
 func main() {
     fs := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
@@ -58,6 +62,9 @@ func main() {
     }
 
     fmt.Printf("SecretLinks %v\n", version)
+
+    viewPage = template.Must(template.ParseFS(embeddedTemplates, "templates/view.html"))
+    clickthroughPage = template.Must(template.ParseFS(embeddedTemplates, "templates/reveal.html"))
 
     router := chi.NewRouter()
     router.Get("/", func(w http.ResponseWriter, r *http.Request) {
