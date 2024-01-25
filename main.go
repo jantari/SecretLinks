@@ -2,6 +2,9 @@ package main
 
 import (
     "fmt"
+    "os"
+    "flag"
+    "errors"
 
     "html/template"
     "net/http"
@@ -9,6 +12,9 @@ import (
 
     "github.com/go-chi/chi/v5"
     "github.com/google/uuid"
+
+    // Configuration
+    "github.com/peterbourgon/ff/v3"
 )
 
 type secret struct {
@@ -22,10 +28,35 @@ var version = "development-build"
 
 var secretStore = make(map[uuid.UUID]secret)
 
-var tmpl = template.Must(template.ParseFiles("view.html"))
-var clickthroughPage = template.Must(template.ParseFiles("reveal.html"))
+var viewPage = template.Must(template.ParseFiles("templates/view.html"))
+var clickthroughPage = template.Must(template.ParseFiles("templates/reveal.html"))
 
 func main() {
+    fs := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+    var versionFlagPtr = fs.Bool("version", false, "Print the version information and exit")
+    var listenAddrPtr  = fs.String("listen", "localhost:8080", "The address and port for the webserver to listen on")
+
+    // Ingest configuration flags.
+    // Commandline arguments > Environment variables > config file
+    err := ff.Parse(
+        fs,
+        os.Args[1:],
+        ff.WithEnvVarPrefix("SECRETLINKS"),
+    )
+    if err != nil {
+        // Replicate default ExitOnError behavior of exiting with 0 when -h/-help/--help is used
+        if errors.Is(err, flag.ErrHelp) {
+            os.Exit(0)
+        }
+        fmt.Println(err)
+        os.Exit(2)
+    }
+
+    if *versionFlagPtr {
+        fmt.Printf("SecretLinks %v\nhttps://github.com/jantari/SecretLinks\n", version)
+        os.Exit(0)
+    }
+
     fmt.Printf("SecretLinks %v\n", version)
 
     router := chi.NewRouter()
@@ -38,7 +69,10 @@ func main() {
     router.Get("/secret/{id}", getSecret)
     router.Post("/secret/{id}", clickthroughRetrieveSecret)
 
-    http.ListenAndServe(":8080", router)
+    if err := http.ListenAndServe(*listenAddrPtr, router); err != nil {
+        fmt.Printf("could not start webserver: %v\n", err)
+        os.Exit(1)
+    }
 }
 
 func getSecret(w http.ResponseWriter, r *http.Request) {
@@ -54,7 +88,7 @@ func getSecret(w http.ResponseWriter, r *http.Request) {
             // Clickthrough not enabled, show secret immediately
             retrievedSecret.Views--
             secretStore[secretID] = retrievedSecret
-            tmpl.Execute(w, retrievedSecret)
+            viewPage.Execute(w, retrievedSecret)
         } else {
             // Clickthrough enabled, return page with button to retrieve (additional request)
             data := struct {
@@ -81,7 +115,7 @@ func clickthroughRetrieveSecret(w http.ResponseWriter, r *http.Request) {
     if ok && retrievedSecret.Views > 0 {
         retrievedSecret.Views--
         secretStore[secretID] = retrievedSecret
-        tmpl.Execute(w, retrievedSecret)
+        viewPage.Execute(w, retrievedSecret)
     }
 }
 
