@@ -36,23 +36,11 @@
         background-size: 300% auto;
       }
 
-      a.fill-div {
-        display: block;
-        height: 100%;
-        width: 100%;
-        color: initial;
-        text-decoration: none;
-      }
-
       .button:hover {
         cursor: pointer;
         transition: 1s;
         box-shadow: 4px 8px 16px 4px rgba(0,0,0,0.25);
         background-position: right 100%;
-      }
-
-      .monospace {
-        font-family: monospace, monospace;
       }
 
       .footer {
@@ -62,6 +50,10 @@
         transform: translate(-50%, 0);
         padding-bottom: 3rem;
         user-select: none;
+      }
+
+      .monospace {
+        font-family: monospace, monospace;
       }
 
       /* Dark Theme overrides */
@@ -78,7 +70,7 @@
     </style>
     <script>
       function clickThrough() {
-        fetch("{{- .SecretId -}}", {
+        fetch("{{- .SecretID -}}", {
           method: "POST",
         })
         .then((response) => response.text())
