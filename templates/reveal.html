@@ -70,7 +70,7 @@
     </style>
     <script>
       function clickThrough() {
-        fetch("{{- .SecretID -}}", {
+        fetch("", { // Empty URL -> current URL
           method: "POST",
         })
         .then((response) => response.text())

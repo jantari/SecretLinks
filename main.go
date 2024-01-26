@@ -98,12 +98,7 @@ func getSecret(w http.ResponseWriter, r *http.Request) {
             viewPage.Execute(w, retrievedSecret)
         } else {
             // Clickthrough enabled, return page with button to retrieve (additional request)
-            data := struct {
-                SecretID string
-            } {
-                SecretID: id,
-            }
-            clickthroughPage.Execute(w, data)
+            clickthroughPage.Execute(w, nil)
         }
     } else {
         http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
