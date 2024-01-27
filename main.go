@@ -10,12 +10,15 @@ import (
     "html/template"
     "net/http"
     "encoding/json"
+    "encoding/base64"
 
     "github.com/go-chi/chi/v5"
     "github.com/google/uuid"
 
     // Configuration
     "github.com/peterbourgon/ff/v3"
+
+    "secretlinks/cryptopasta"
 )
 
 type secret struct {
@@ -24,10 +27,26 @@ type secret struct {
     ClickThrough bool   `json:"click"`
 }
 
+type storedSecret struct {
+    Secret       []byte
+    Views        int
+    ClickThrough bool
+}
+
+func (s storedSecret) decryptSecret(key [32]byte) (string, error) {
+    plaintext, err := cryptopasta.Decrypt(s.Secret, &key)
+    if err != nil {
+        fmt.Printf("error decrypting: %v\n", err)
+        return "", err
+    }
+
+    return string(plaintext), nil
+}
+
 // This variable is overwritten at compile/link time using -ldflags
 var version = "development-build"
 
-var secretStore = make(map[uuid.UUID]secret)
+var secretStore = make(map[uuid.UUID]storedSecret)
 
 //go:embed templates/*
 var embeddedTemplates embed.FS
@@ -73,8 +92,8 @@ func main() {
     router.Route("/api", func(apiRouter chi.Router) {
         apiRouter.Post("/secret", newSecret)
     })
-    router.Get("/secret/{id}", getSecret)
-    router.Post("/secret/{id}", clickthroughRetrieveSecret)
+    router.Get("/secret/{id}/{key}", getSecret)
+    router.Post("/secret/{id}/{key}", clickthroughRetrieveSecret)
 
     if err := http.ListenAndServe(*listenAddrPtr, router); err != nil {
         fmt.Printf("could not start webserver: %v\n", err)
@@ -84,18 +103,42 @@ func main() {
 
 func getSecret(w http.ResponseWriter, r *http.Request) {
     id := chi.URLParam(r, "id")
+    key := chi.URLParam(r, "key")
+    keyBytes, err := base64.URLEncoding.DecodeString(key)
+    if err != nil || len(keyBytes) != 32 {
+        // invalid decryption key
+        http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+        return
+    }
     secretID, err := uuid.Parse(id)
     if err != nil {
+        // invalid UUID
         http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
         return
     }
     retrievedSecret, ok := secretStore[secretID]
     if ok && retrievedSecret.Views > 0 {
+        decryptedSecret, err := retrievedSecret.decryptSecret([32]byte(keyBytes))
+        if err != nil {
+            // Return 404 on decryption failures to not give away the requester
+            // found a valid GUID in case they are just guessing URLs.
+            // TODO: mitigate timing attacks
+            http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+            return
+        }
+
         if !retrievedSecret.ClickThrough {
             // Clickthrough not enabled, show secret immediately
             retrievedSecret.Views--
             secretStore[secretID] = retrievedSecret
-            viewPage.Execute(w, retrievedSecret)
+
+            viewPage.Execute(w, struct{
+                Secret string
+                Views int
+            } {
+                Secret: decryptedSecret,
+                Views: retrievedSecret.Views,
+            })
         } else {
             // Clickthrough enabled, return page with button to retrieve (additional request)
             clickthroughPage.Execute(w, nil)
@@ -108,6 +151,13 @@ func getSecret(w http.ResponseWriter, r *http.Request) {
 
 func clickthroughRetrieveSecret(w http.ResponseWriter, r *http.Request) {
     id := chi.URLParam(r, "id")
+    key := chi.URLParam(r, "key")
+    keyBytes, err := base64.URLEncoding.DecodeString(key)
+    if err != nil || len(keyBytes) != 32 {
+        // invalid decryption key
+        http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+        return
+    }
     secretID, err := uuid.Parse(id)
     if err != nil {
         http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
@@ -115,9 +165,26 @@ func clickthroughRetrieveSecret(w http.ResponseWriter, r *http.Request) {
     }
     retrievedSecret, ok := secretStore[secretID]
     if ok && retrievedSecret.Views > 0 {
+        decryptedSecret, err := retrievedSecret.decryptSecret([32]byte(keyBytes))
+        if err != nil {
+            // Return 404 on decryption failures to not give away the requester
+            // found a valid GUID in case they are just guessing URLs.
+            // TODO: mitigate timing attacks
+            http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+            return
+        }
         retrievedSecret.Views--
         secretStore[secretID] = retrievedSecret
-        viewPage.Execute(w, retrievedSecret)
+        viewPage.Execute(w, struct{
+            Secret string
+            Views int
+        } {
+            Secret: decryptedSecret,
+            Views: retrievedSecret.Views,
+        })
+    } else {
+        http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+        return
     }
 }
 
@@ -137,8 +204,21 @@ func newSecret(w http.ResponseWriter, r *http.Request) {
     if payload.Views < 1 {
         payload.Views = 1
     }
-    secretStore[id] = *payload
 
-    w.Write([]byte(fmt.Sprintf("%v", id)))
+    key := cryptopasta.NewEncryptionKey()
+    secretBytes := []byte(payload.Secret)
+    encryptedSecret, err := cryptopasta.Encrypt(secretBytes, key)
+    if err != nil {
+        http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+        return
+    }
+
+    secretStore[id] = storedSecret{
+        Secret: encryptedSecret,
+        Views: payload.Views,
+        ClickThrough: payload.ClickThrough,
+    }
+
+    w.Write([]byte(fmt.Sprintf("secret/%v/%v\n", id, base64.URLEncoding.EncodeToString(key[:]))))
 }
 
