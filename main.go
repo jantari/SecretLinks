@@ -294,19 +294,20 @@ func storeSecretInDatabase(key uuid.UUID, value storedSecret, updateIfExists boo
     jsonData, err := json.Marshal(value)
     if err != nil {
         fmt.Println(err)
+        return err
     }
 
     err = db.Update(func(tx *bolt.Tx) error {
         b := tx.Bucket([]byte("Secrets"))
         // Abort if the key already exists and update isn't set
-        if updateIfExists != true && b.Get(key[:]) != nil {
+        if !updateIfExists && b.Get(key[:]) != nil {
             return errors.New("key aready exists")
         }
         err := b.Put(key[:], []byte(jsonData))
         return err
     })
 
-    return nil
+    return err
 }
 
 func deleteSecretFromDatabase(key uuid.UUID) error {
