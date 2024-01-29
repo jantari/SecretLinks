@@ -1,0 +1,6 @@
+# Compiled exexutables
+/secretlinks
+*.exe
+
+# Other
+/store.db
