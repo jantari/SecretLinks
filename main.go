@@ -126,8 +126,7 @@ func main() {
     router.Route("/api", func(apiRouter chi.Router) {
         apiRouter.Post("/secret", newSecret)
     })
-    router.Get("/secret/{id}/{key}", getSecret)
-    router.Post("/secret/{id}/{key}", clickthroughRetrieveSecret)
+    router.HandleFunc("/secret/{id}/{key}", viewPageHandler)
 
     if err := http.ListenAndServe(*listenAddrPtr, router); err != nil {
         logging.Logger.Error("could not start webserver", slog.Any("error", err))
@@ -135,7 +134,12 @@ func main() {
     }
 }
 
-func getSecret(w http.ResponseWriter, r *http.Request) {
+func viewPageHandler(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodGet && r.Method != http.MethodPost {
+        http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+        return
+    }
+
     id := chi.URLParam(r, "id")
     key := chi.URLParam(r, "key")
     keyBytes, err := base64.URLEncoding.DecodeString(key)
@@ -162,8 +166,9 @@ func getSecret(w http.ResponseWriter, r *http.Request) {
             return
         }
 
-        if !retrievedSecret.ClickThrough {
-            // Clickthrough not enabled, show secret immediately
+        // When clickthrough is not enabled or request is POST, show secret immediately.
+        // A POST request is triggered by the "reveal" button on the clickthrough page.
+        if !retrievedSecret.ClickThrough || r.Method == http.MethodPost {
             retrievedSecret.Views--
             if retrievedSecret.Views < 1 {
                 err = deleteSecretFromDatabase(secretID)
@@ -186,54 +191,6 @@ func getSecret(w http.ResponseWriter, r *http.Request) {
             // Clickthrough enabled, return page with button to retrieve (additional request)
             clickthroughPage.Execute(w, nil)
         }
-    } else {
-        http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-        return
-    }
-}
-
-func clickthroughRetrieveSecret(w http.ResponseWriter, r *http.Request) {
-    id := chi.URLParam(r, "id")
-    key := chi.URLParam(r, "key")
-    keyBytes, err := base64.URLEncoding.DecodeString(key)
-    if err != nil || len(keyBytes) != 32 {
-        // invalid decryption key
-        http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-        return
-    }
-    secretID, err := uuid.Parse(id)
-    if err != nil {
-        http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-        return
-    }
-    retrievedSecret, err := getSecretFromDatabase(secretID)
-    if err == nil && retrievedSecret.Views > 0 {
-        decryptedSecret, err := retrievedSecret.decryptSecret([32]byte(keyBytes))
-        if err != nil {
-            // Return 404 on decryption failures to not give away the requester
-            // found a valid GUID in case they are just guessing URLs.
-            // TODO: mitigate timing attacks
-            http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-            return
-        }
-        retrievedSecret.Views--
-        if retrievedSecret.Views < 1 {
-            err = deleteSecretFromDatabase(secretID)
-        } else {
-            err = storeSecretInDatabase(secretID, retrievedSecret, true)
-        }
-        if err != nil {
-            http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-            return
-        }
-
-        viewPage.Execute(w, struct{
-            Secret string
-            Views int
-        } {
-            Secret: decryptedSecret,
-            Views: retrievedSecret.Views,
-        })
     } else {
         http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
         return
