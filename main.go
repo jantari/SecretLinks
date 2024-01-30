@@ -7,6 +7,7 @@ import (
     "time"
     "embed"
     "errors"
+    "log/slog"
 
     "html/template"
     "net/http"
@@ -14,6 +15,7 @@ import (
     "encoding/base64"
 
     "github.com/go-chi/chi/v5"
+    "github.com/go-chi/httplog/v2"
     "github.com/google/uuid"
 
     // Configuration
@@ -21,6 +23,7 @@ import (
 
     bolt "go.etcd.io/bbolt"
 
+    "secretlinks/logging"
     "secretlinks/cryptopasta"
 )
 
@@ -42,7 +45,7 @@ type storedSecret struct {
 func (s storedSecret) decryptSecret(key [32]byte) (string, error) {
     plaintext, err := cryptopasta.Decrypt(s.Secret, &key)
     if err != nil {
-        fmt.Printf("error decrypting: %v\n", err)
+        logging.Logger.Error("could not decrypt secret", slog.Any("error", err))
         return "", err
     }
 
@@ -64,6 +67,7 @@ func main() {
     fs := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
     var versionFlagPtr = fs.Bool("version", false, "Print the version information and exit")
     var listenAddrPtr  = fs.String("listen", "localhost:8080", "The address and port for the webserver to listen on")
+    var logLevelPtr    = fs.String("logLevel", "info", "Set log verbosity: error, warn, info or debug")
     var dbfilePtr      = fs.String("dbfile", "./store.db", "Path to the Bolt database file to store secrets")
 
     // Ingest configuration flags.
@@ -89,13 +93,15 @@ func main() {
 
     fmt.Printf("SecretLinks %v\n", version)
 
+    logging.InitLogging(*logLevelPtr)
+
     viewPage = template.Must(template.ParseFS(embeddedTemplates, "templates/view.html"))
     clickthroughPage = template.Must(template.ParseFS(embeddedTemplates, "templates/reveal.html"))
 
     // DB setup
     db, err = bolt.Open(*dbfilePtr, 0600, &bolt.Options{Timeout: 10 * time.Second})
     if err != nil {
-        fmt.Println(err)
+        logging.Logger.Error("could not open database", slog.Any("error", err))
         os.Exit(1)
     }
     defer db.Close()
@@ -107,8 +113,13 @@ func main() {
         }
         return nil
     })
+    if err != nil {
+        logging.Logger.Error("could not initialize database", slog.Any("error", err))
+        os.Exit(1)
+    }
 
     router := chi.NewRouter()
+    router.Use(httplog.RequestLogger(logging.HttpLogger))
     router.Get("/", func(w http.ResponseWriter, r *http.Request) {
         w.Write([]byte("SecretLinks"))
     })
@@ -119,7 +130,7 @@ func main() {
     router.Post("/secret/{id}/{key}", clickthroughRetrieveSecret)
 
     if err := http.ListenAndServe(*listenAddrPtr, router); err != nil {
-        fmt.Printf("could not start webserver: %v\n", err)
+        logging.Logger.Error("could not start webserver", slog.Any("error", err))
         os.Exit(1)
     }
 }
@@ -262,7 +273,7 @@ func newSecret(w http.ResponseWriter, r *http.Request) {
     }
     err = storeSecretInDatabase(id, data, false)
     if err != nil {
-        fmt.Printf("error storing secret in DB: %v\n", err)
+        logging.Logger.Error("could not store secret in DB", slog.Any("error", err))
         http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
         return
     }
@@ -285,7 +296,7 @@ func getSecretFromDatabase(key uuid.UUID) (storedSecret, error) {
         return nil
     })
     if err != nil {
-        fmt.Printf("error getting secret from DB: %v\n", err)
+        logging.Logger.Error("could not get secret from DB", slog.Any("error", err))
     }
     return retrievedSecret, nil
 }
@@ -293,7 +304,7 @@ func getSecretFromDatabase(key uuid.UUID) (storedSecret, error) {
 func storeSecretInDatabase(key uuid.UUID, value storedSecret, updateIfExists bool) error {
     jsonData, err := json.Marshal(value)
     if err != nil {
-        fmt.Println(err)
+        logging.Logger.Error("could not marshal secret", slog.Any("error", err))
         return err
     }
 
