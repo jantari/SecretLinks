@@ -21,6 +21,7 @@ import (
     // Configuration
     "github.com/peterbourgon/ff/v3"
 
+    // Persistent secret storage
     bolt "go.etcd.io/bbolt"
 
     "secretlinks/logging"
@@ -31,15 +32,17 @@ import (
 type payloadSecret struct {
     Secret       string `json:"secret"`
     Views        int    `json:"views"`
+    ExpireDays   int    `json:"expires"`
     ClickThrough bool   `json:"click"`
 }
 
 // Data stored in persistent storage (secret encrypted)
 type storedSecret struct {
-    Secret       []byte `json:"secret"`
-    Views        int    `json:"views"`
-    ClickThrough bool   `json:"click"`
-    CreationDate string `json:"created"`
+    Secret       []byte    `json:"secret"`
+    Views        int       `json:"views"`
+    ExpireDays   int       `json:"expires"`
+    ClickThrough bool      `json:"click"`
+    CreationDate time.Time `json:"created"`
 }
 
 func (s storedSecret) decryptSecret(key [32]byte) (string, error) {
@@ -94,6 +97,10 @@ func main() {
     fmt.Printf("SecretLinks %v\n", version)
 
     logging.InitLogging(*logLevelPtr)
+
+    expiredSecrets := make(chan []byte)
+    go backgroundScan(expiredSecrets)
+    go backgroundPrune(expiredSecrets)
 
     viewPage = template.Must(template.ParseFS(embeddedTemplates, "templates/view.html"))
     clickthroughPage = template.Must(template.ParseFS(embeddedTemplates, "templates/reveal.html"))
@@ -213,6 +220,9 @@ func newSecret(w http.ResponseWriter, r *http.Request) {
     if payload.Views < 1 {
         payload.Views = 1
     }
+    if payload.ExpireDays < 1 {
+        payload.ExpireDays = 3
+    }
 
     key := cryptopasta.NewEncryptionKey()
     secretBytes := []byte(payload.Secret)
@@ -225,8 +235,9 @@ func newSecret(w http.ResponseWriter, r *http.Request) {
     data := storedSecret{
         Secret: encryptedSecret,
         Views: payload.Views,
+        ExpireDays: payload.ExpireDays,
         ClickThrough: payload.ClickThrough,
-        CreationDate: time.Now().UTC().Format(time.RFC3339),
+        CreationDate: time.Now().UTC(),
     }
     err = storeSecretInDatabase(id, data, false)
     if err != nil {
@@ -281,8 +292,47 @@ func storeSecretInDatabase(key uuid.UUID, value storedSecret, updateIfExists boo
 func deleteSecretFromDatabase(key uuid.UUID) error {
     err := db.Update(func (tx *bolt.Tx) error {
         b := tx.Bucket([]byte("Secrets"))
-        err := b.Delete(key[:])
-        return err
+        return b.Delete(key[:])
     })
     return err
+}
+
+func backgroundScan(channel chan []byte) {
+    // Every 10 minutes, open the database for reading and search for expired secrets
+    for range time.NewTicker(10 * time.Minute).C {
+        now := time.Now().UTC()
+        // We can ignore the returne value because this closure never returns an error because
+        // we don't want to break the loop and stop processing secrets just because one failed.
+        _ = db.View(func(tx *bolt.Tx) error {
+            b := tx.Bucket([]byte("Secrets"))
+            c := b.Cursor()
+
+            for k, v := c.First(); k != nil; k, v = c.Next() {
+                um := &storedSecret{}
+                err := json.Unmarshal(v, &um)
+                if err == nil {
+                    if um.CreationDate.AddDate(0, 0, um.ExpireDays).Before(now) {
+                        // Queue the secret to be deleted
+                        channel <- k
+                    }
+                } else {
+                    logging.Logger.Error("error unmarshaling secret", slog.String("secret", uuid.UUID(k).String()), slog.Any("error", err))
+                }
+            }
+            return nil
+        })
+    }
+}
+
+func backgroundPrune(channel chan []byte) {
+    // Whenever a key is pushed to this channel, lock the database for rw and delete the secret
+    for v := range channel {
+        secretUUID := uuid.UUID(v)
+        err := deleteSecretFromDatabase(secretUUID)
+        if err != nil {
+            logging.Logger.Error("could not delete expired secret", slog.String("secret", secretUUID.String()), slog.Any("error", err))
+        } else {
+            logging.Logger.Info("deleted expired secret", slog.String("secret", secretUUID.String()))
+        }
+    }
 }
