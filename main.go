@@ -306,6 +306,7 @@ func backgroundScan(channel chan []byte) {
         _ = db.View(func(tx *bolt.Tx) error {
             b := tx.Bucket([]byte("Secrets"))
             c := b.Cursor()
+            logging.Logger.Debug("checking for expired secrets", slog.Int("secretsCount", b.Stats().KeyN))
 
             for k, v := c.First(); k != nil; k, v = c.Next() {
                 um := &storedSecret{}
