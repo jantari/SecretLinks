@@ -90,11 +90,11 @@
         {{- .Secret -}}
       </div>
       <div style="margin-top: 3rem; user-select: none;" class="center button" onclick="copySecretToClipboard()">
-        COPY📋
+        {{- translate "msg_copy" -}}📋
       </div>
     </div>
     <div style="font-size: 16px;" class="center footer">
-      {{ .Views }} more views left.
+      {{ translate "msg_views_remaining" .Views }}
     </div>
   </body>
 </html>
