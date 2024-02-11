@@ -1,7 +1,14 @@
-# SecretLinks
+<h1 align="center">SecretLinks</h1>
 
-SecretLinks is a very small application that lets you share secrets or sensitive information
-with others via links that expire after a certain amount of accesses or days.
+<p align="center">
+SecretLinks is a very small application that lets you share secrets or sensitive<br>
+information with others via links that expire after a certain amount of accesses or days.
+</p>
+
+<p float="left" align="middle">
+  <img src="https://github.com/jantari/SecretLinks/assets/25607767/4c6a862d-e7e1-4fb2-8ee5-d4e49e2872fd" width="45%" />
+  <img src="https://github.com/jantari/SecretLinks/assets/25607767/7b322d7a-164a-40ff-b2aa-4e174888b6ba" width="45%" />
+</p>
 
 ### API
 
@@ -96,8 +103,8 @@ flowchart TD;
     SECRETLINKS(SecretLinks);
     INTERNAL(Other internal systems);
     USERS(["Users 👥"]);
-    PROXY("<b>Reverse Proxy 🛃</b>
-      - prohibits access to <samp>/api</samp>
+    PROXY("Reverse Proxy 🛃
+      - prohibits access to /api
       - handles TLS encryption
     ");
     style INTERNAL stroke,stroke-dasharray: 5 5
