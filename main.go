@@ -126,14 +126,14 @@ func main() {
     localizedViewPage = map[language.Tag]*template.Template{}
     for _, lang := range serverLangs {
         localizedViewPage[lang] = template.Must(template.New("view.html").Funcs(template.FuncMap{
-            "translate": translatePageSnippetFL(lang),
+            "translate": translatePageSnippet(lang),
         }).ParseFS(embeddedTemplates, "templates/view.html"))
     }
 
     localizedClickPage = map[language.Tag]*template.Template{}
     for _, lang := range serverLangs {
         localizedClickPage[lang] = template.Must(template.New("reveal.html").Funcs(template.FuncMap{
-            "translate": translatePageSnippetFL(lang),
+            "translate": translatePageSnippet(lang),
         }).ParseFS(embeddedTemplates, "templates/reveal.html"))
     }
 
@@ -419,8 +419,7 @@ func (d *myOwnDictionary) Lookup(key string) (data string, ok bool) {
   return "", false
 }
 
-// translatePageSnippet - fixed Language
-func translatePageSnippetFL(tag language.Tag) func(msg string, a ...interface{}) string {
+func translatePageSnippet(tag language.Tag) func(msg string, a ...interface{}) string {
     return func(msg string, a ...interface{}) string {
         return message.NewPrinter(tag, message.Catalog(translationCatalog)).Sprintf(msg, a...)
     }
