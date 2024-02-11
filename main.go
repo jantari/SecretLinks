@@ -181,7 +181,7 @@ func viewPageHandler(w http.ResponseWriter, r *http.Request) {
 
     accept := r.Header.Get("Accept-Language")
     // NewMatcher returns the first element in the list in case no match is found,
-    // so we want to make sure the first element is the undefiend language as that's
+    // so we want to make sure the first element is the undefined language as that's
     // set up to handle all fallback scenarios.
     matcher := language.NewMatcher(serverLangs)
     tag, _ := language.MatchStrings(matcher, accept)
@@ -213,7 +213,6 @@ func viewPageHandler(w http.ResponseWriter, r *http.Request) {
             return
         }
 
-        // Fallback in case nothing matches
         var localizedTemplateToRender *template.Template
 
         // When clickthrough is not enabled or request is POST, show secret immediately.
