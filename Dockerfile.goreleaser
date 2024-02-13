@@ -1,0 +1,20 @@
+# syntax=docker/dockerfile:1
+
+FROM scratch
+
+COPY <<EOF /etc/passwd
+secretlinks:x:10003:10003:secretlinks:/:/secretlinks
+EOF
+
+USER secretlinks
+
+# WORKDIR creates directories if they don't exist; with 755 and owned by the current USER
+WORKDIR /etc/secretlinks
+WORKDIR /translations
+WORKDIR /
+
+COPY SecretLinks /secretlinks
+
+ENV SECRETLINKS_DBFILE=/etc/secretlinks/store.db
+
+ENTRYPOINT ["/secretlinks"]

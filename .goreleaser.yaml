@@ -24,3 +24,19 @@ release:
   prerelease: auto
   draft: true
 
+dockers:
+  - use: buildx
+    ids: [linux]
+    dockerfile: Dockerfile.goreleaser
+    image_templates:
+      - ghcr.io/jantari/secretlinks:latest
+      - ghcr.io/jantari/secretlinks:{{.Version}}
+      - "{{ if not .Prerelease }}ghcr.io/jantari/secretlinks:stable{{ end }}"
+    build_flag_templates:
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.title=SecretLinks"
+      - "--label=org.opencontainers.image.description=SecretLinks is a simple password and secret sharing service"
+      - "--label=org.opencontainers.image.url=github.com/jantari/SecretLinks"
+      - "--label=org.opencontainers.image.source=github.com/jantari/SecretLinks"
