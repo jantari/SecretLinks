@@ -10,7 +10,25 @@ information with others via links that expire after a certain amount of accesses
   <img src="https://github.com/jantari/SecretLinks/assets/25607767/7b322d7a-164a-40ff-b2aa-4e174888b6ba" width="45%" />
 </p>
 
-### API
+## 🧭 Getting Started
+
+### 💾 Binaries
+
+Download the latest [release](https://github.com/jantari/SecretLinks/releases), extract and run it!
+
+### 🐋 Docker
+
+```
+docker run \
+  -e SECRETLINKS_LISTEN='0.0.0.0:8080' \
+  -p 8080:8080 \
+  ghcr.io/jantari/secretlinks:stable
+```
+
+Please note if you do not mount a persistent volume for the DB file (at `/etc/secretlinks/store.db` by default)
+into the container, all secrets will be lost upon container restart.
+
+### 🥧 API
 
 <details>
   <summary><code>POST /api/secret</code> - Create a new secret</summary>
@@ -33,7 +51,7 @@ information with others via links that expire after a certain amount of accesses
   ---
 </details>
 
-### Configuration
+### ⚙️ Configuration
 
 SecretLinks can be configured through commandline arguments and environment variables.
 
