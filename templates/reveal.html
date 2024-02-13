@@ -25,6 +25,12 @@
       }
 
       .button {
+        /* Undo default button styles */
+        border: 0px;
+        color: inherit;
+        font-family: inherit;
+
+        font-size: 32px;
         border-radius: 50vh;
         padding: 0.2em 0.6em 0.2em 0.6em;
         width: fit-content;
@@ -136,10 +142,10 @@
     </script>
   </head>
   <body>
-    <div style="font-size: 32px; padding: 5rem 3rem; box-sizing: border-box;" class="center">
-      <div class="button" onclick="clickThrough()">
+    <div style="padding: 5rem 3rem; box-sizing: border-box;" class="center">
+      <button class="button" type="button" onclick="clickThrough()">
         {{ translate "msg_reveal" }}
-      </div>
+      </button>
     </div>
   </body>
 </html>

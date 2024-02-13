@@ -25,6 +25,12 @@
       }
 
       .button {
+        /* Undo default button styles */
+        border: 0px;
+        color: inherit;
+        font-family: inherit;
+
+        font-size: 32px;
         border-radius: 50vh;
         padding: 0.2em 0.6em 0.2em 0.6em;
         width: fit-content;
@@ -118,9 +124,9 @@
       <div id="secret" class="monospace">
         {{- .Secret -}}
       </div>
-      <div style="margin-top: 3rem; user-select: none;" class="center button" onclick="copySecretToClipboard()">
+      <button style="margin-top: 3rem; user-select: none;" class="center button" type="button" onclick="copySecretToClipboard()">
         {{- translate "msg_copy" -}}📋
-      </div>
+      </button>
     </div>
     <div style="font-size: 16px;" class="center footer">
       {{ translate "msg_views_remaining" .Views }}
