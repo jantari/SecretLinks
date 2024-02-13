@@ -32,13 +32,15 @@
         transition: background-position 0s, box-shadow 0.3s;
         background: linear-gradient(110deg, cadetblue 0 40%, darkturquoise, cadetblue 60% 100%);
         background-size: 250% auto;
+        background-position: right 125%;
+        view-transition-name: movebutton;
       }
 
       .button:hover {
         cursor: pointer;
         transition: background-position 0.5s, box-shadow 0.6s;
         box-shadow: 2px 6px 12px 4px rgba(0,0,0,0.2);
-        background-position: right 125%;
+        background-position: left 0%;
       }
 
       .footer {
@@ -81,6 +83,19 @@
           border: 1px dashed black;
         }
       }
+
+      .button:active {
+        box-shadow: 2px 4px 6px 2px rgba(0,0,0,0.22);
+        background: #568e8f;
+        transition: box-shadow 0.1s;
+      }
+
+      /* Dark Theme overrides for active button */
+      @media (prefers-color-scheme: dark) {
+        .button:active {
+          box-shadow: 2px 4px 6px 2px rgba(0,0,0,0.44);
+        }
+      }
     </style>
     <script>
       function clickThrough() {
@@ -93,7 +108,15 @@
           var parser = new DOMParser();
           var doc = parser.parseFromString(text, 'text/html');
           var body = doc.querySelector('body');
-          document.querySelector('body').innerHTML = body.innerHTML;
+
+          // Fallback if View Transitions API is not supported.
+          if (!document.startViewTransition) {
+            document.querySelector('body').innerHTML = body.innerHTML;
+            return;
+          }
+          document.startViewTransition(() => {
+            document.querySelector('body').innerHTML = body.innerHTML;
+          });
         });
       }
 
