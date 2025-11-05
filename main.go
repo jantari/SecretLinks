@@ -438,7 +438,7 @@ func loadTranslations(translationsPath string) ([]language.Tag, catalog.Catalog)
     translations["und"] = &myOwnDictionary{
         Data: map[string]string{
             "msg_reveal": "Reveal",
-            "msg_copy": "COPY",
+            "msg_copy": "COPY📋",
             "msg_views_remaining": "%d more views left.",
        },
     }
