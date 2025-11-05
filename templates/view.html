@@ -49,6 +49,12 @@
         background-position: left 0%;
       }
 
+      .button:disabled {
+        box-shadow: none;
+        filter: grayscale();
+        pointer-events: none;
+      }
+
       .footer {
         position: fixed;
         bottom: 0;
@@ -124,12 +130,14 @@
       <div id="secret" class="monospace">
         {{- .Secret -}}
       </div>
-      <button style="margin-top: 3rem; user-select: none;" class="center button" type="button" onclick="copySecretToClipboard()">
+      <button id="btnCopy" style="margin-top: 3rem; user-select: none;" class="center button" type="button" onclick="copySecretToClipboard()" disabled=true>
         {{- translate "msg_copy" -}}
       </button>
     </div>
     <div style="font-size: 16px;" class="center footer">
       {{ translate "msg_views_remaining" .Views }}
     </div>
+    <!-- styles onload script gets executed even when this body is swapped in via reveal -->
+    <style onload="if (navigator.clipboard) { document.getElementById('btnCopy').disabled = false; }"></style>
   </body>
 </html>
